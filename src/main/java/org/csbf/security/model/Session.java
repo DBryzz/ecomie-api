@@ -46,7 +46,7 @@ public class Session {
     private LocalDateTime startDate;
     @Column(nullable = false, updatable = false)
     private LocalDateTime endDate;
-    @Column(nullable = false, columnDefinition = "varchar(255) default INACTIVE")
+    @Column(nullable = false, columnDefinition = "varchar(255) default 'INACTIVE'")
     private String status;
     @CreationTimestamp
     private LocalDateTime createdAt;

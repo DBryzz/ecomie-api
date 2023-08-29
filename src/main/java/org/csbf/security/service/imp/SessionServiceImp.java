@@ -15,6 +15,8 @@ import org.csbf.security.repository.UserRepository;
 import org.csbf.security.service.SessionService;
 import org.csbf.security.utils.helperclasses.HelperDto;
 import org.csbf.security.utils.helperclasses.ResponseMessage;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -73,7 +75,13 @@ public class SessionServiceImp implements SessionService {
 
     @Override
     public HelperDto.SessionFullDto getSession(UUID id) {
-        var session = sessionRepo.findById(id).orElseThrow(()->new ResourceNotFoundException("session not found"));
+        Authentication authUser = SecurityContextHolder.getContext().getAuthentication();
+        var session = sessionRepo.findById(id).orElseThrow(() -> new ResourceNotFoundException("session not found"));
+
+        if (!authUser.getAuthorities().contains("ADMIN")){
+            var user = userRepo.findByEmail(authUser.getName()).orElseThrow(()->new ResourceNotFoundException("user not found"));
+            subscriptionRepo.findBySessionAndUser(session, user).orElseThrow(()->new BadRequestException.InvalidAuthenticationRequestException("Forbidden Request. User not subscribed"));
+        }
         return new HelperDto.SessionFullDto(session);
     }
 

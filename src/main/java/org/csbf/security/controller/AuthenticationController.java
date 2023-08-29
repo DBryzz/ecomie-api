@@ -1,6 +1,7 @@
 package org.csbf.security.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -18,8 +19,9 @@ import javax.validation.constraints.Email;
 @Slf4j
 @Validated
 @RestController
-@RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor
+@RequestMapping("/api/v1/auth")
+@Tag(name = "AuthenticationController", description = "This controller contains endpoints for authentication")
 public class AuthenticationController {
     private final AuthenticationService service;
     private final ApplicationEventPublisher applicationEventPublisher;
@@ -27,7 +29,7 @@ public class AuthenticationController {
 
 
     @PostMapping("/register")
-    @Operation(summary = "Register", description = "Create account", tags = {"AuthenticationController"})
+    @Operation(summary = "Register", description = "Create account", tags = {"Unauthenticated"})
     public ResponseEntity<HelperDto.AuthenticationResponse> register(@RequestBody HelperDto.RegisterRequest request, HttpServletRequest servletRequest) {
         /**For Production */
         /*
@@ -45,7 +47,7 @@ public class AuthenticationController {
     }
 
     @PostMapping("/authenticate")
-    @Operation(summary = "Authenticate", description = "Authenticate user using email and password", tags = {"AuthenticationController"})
+    @Operation(summary = "Authenticate", description = "Authenticate user using email and password", tags = {"Unauthenticated"})
     public ResponseEntity<HelperDto.AuthenticationResponse> authenticate(@RequestBody HelperDto.AuthenticationRequest request, HttpServletRequest servletRequest) {
         String appUrl = servletRequest.getContextPath();
 
@@ -61,14 +63,14 @@ public class AuthenticationController {
     }
 
     @RequestMapping(value = "/confirm-account", method = {RequestMethod.GET, RequestMethod.POST})
-    @Operation(summary = "Confirm Account", description = "Confirm users email address", tags = {"AuthenticationController"})
+    @Operation(summary = "Confirm Account", description = "Confirm users email address", tags = {"Unauthenticated"})
     public ResponseEntity<HelperDto.ConfirmEmailResponse> confirmUserAccount(@Email @RequestParam("email") String email, @RequestParam("token") String token) {
         log.info("Email {}", email);
         return ResponseEntity.ok(service.confirmEmail(email, token));
     }
 
     @RequestMapping(value = "/resend-link", method = {RequestMethod.POST})
-    @Operation(summary = "Resend Confirmation Link", description = "Sends confirmation link to the email sent in request body", tags = {"AuthenticationController"})
+    @Operation(summary = "Resend Confirmation Link", description = "Sends confirmation link to the email sent in request body", tags = {"Unauthenticated"})
     public ResponseEntity<ResponseMessage> resendUserEmailConfirmationLink(@RequestBody HelperDto.ResendVerificationEmailDTO emailDTO, HttpServletRequest servletRequest) {
         log.info("Email {}", emailDTO);
         /**For Production */

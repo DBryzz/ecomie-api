@@ -29,6 +29,7 @@ public class SetupDataLoader implements ApplicationListener<ContextRefreshedEven
                     .phoneNumber(env.getProperty("super.admin.phone-number"))
                     .password(passwordEncoder.encode(env.getProperty("super.admin.password")))
                     .roles(Role.SUPER_ADMIN.name()+"-"+Role.ADMIN.name()+"-"+Role.ECOMIEST.name()+"-"+Role.MISSIONARY.name()+"-"+Role.PRAYER_WARRIOR.name()+"-"+Role.SPONSOR.name()+"-"+Role.USER.name())
+                    .emailVerificationToken(env.getProperty("SUPER_ADMIN_EMAIL_VERIFICATION_TOKEN"))
                     .country(env.getProperty("super.admin.country"))
                     .region(env.getProperty("super.admin.region"))
                     .city(env.getProperty("super.admin.city"))

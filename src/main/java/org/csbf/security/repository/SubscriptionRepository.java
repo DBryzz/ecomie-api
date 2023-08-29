@@ -14,6 +14,7 @@ import java.util.UUID;
 
 public interface SubscriptionRepository extends JpaRepository<Subscription, UUID> {
     Optional<Subscription> findByIdAndUser(UUID subscriptionId, User user);
+    List<Subscription> findAllByUserAndChallenge(User user, Challenge challenge);
     Optional<Subscription> findBySession(Session session);
     Optional<Subscription> findBySessionAndBlocked(Session session, boolean blocked);
     Optional<Subscription> findBySessionAndUser(Session session, User user);

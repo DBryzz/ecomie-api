@@ -1,0 +1,78 @@
+version: "3.8"
+services:
+  ecomie-service:
+    container_name: ecomie-service
+    build:
+      context: ./
+    volumes:
+      - .:/build
+      - /build/target
+    ports:
+      - "8081:8081"
+    environment:
+      ## POSTGRESQL DOCKER CONFIG
+      DATABASE_TYPE: ${DATABASE_TYPE}
+      DATASOURCE_URL: ${DATASOURCE_URL}
+      DATASOURCE_USERNAME: ${DATASOURCE_USERNAME}
+      DATASOURCE_PASSWORD: ${DATASOURCE_PASSWORD}
+      DATASOURCE_DRIVERCLASSNAME: ${DATASOURCE_DRIVERCLASSNAME}
+      ## PORT CONFIG
+      PORT: ${PORT}
+      ## MAILING CONFIG
+      MAIL_ADDRESS: ${MAIL_ADDRESS}
+      MAIL_PASSWORD: ${MAIL_PASSWORD}
+      MAIL_HOST: ${MAIL_HOST}
+      MAIL_PORT: ${MAIL_PORT}
+      MAIL_PROP_SMTP_AUTH: ${MAIL_PROP_SMTP_AUTH}
+      MAIL_PROP_SMTP_STARTTLS: ${MAIL_PROP_SMTP_STARTTLS}
+      ACTUATOR_ALLOWED_ORIGINS: ${ACTUATOR_ALLOWED_ORIGINS}
+      ## JWT  CONFIG
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      SECRET_KEY: ${SECRET_KEY}
+      REFRESH_TOKEN_DURATION_IN_MINUTES: ${REFRESH_TOKEN_DURATION_IN_MINUTES}
+      ACCESS_TOKEN_DURATION_IN_DAYS: ${ACCESS_TOKEN_DURATION_IN_DAYS}
+      ACCESS_TOKEN_DURATION_IN_MINUTES: ${ACCESS_TOKEN_DURATION_IN_MINUTES}
+      ## SUPER ADMIN DETAILS CONFIG
+      SUPER_ADMIN_EMAIL: ${SUPER_ADMIN_EMAIL}
+      SUPER_ADMIN_FIRST_NAME: ${SUPER_ADMIN_FIRST_NAME}
+      SUPER_ADMIN_LAST_NAME: ${SUPER_ADMIN_LAST_NAME}
+      SUPER_ADMIN_PASSWORD: ${SUPER_ADMIN_PASSWORD}
+      SUPER_ADMIN_EMAIL_VERIFICATION_TOKEN: ${SUPER_ADMIN_EMAIL_VERIFICATION_TOKEN}
+      SUPER_ADMIN_PHONE_NUMBER: ${SUPER_ADMIN_PHONE_NUMBER}
+      SUPER_ADMIN_COUNTRY: ${SUPER_ADMIN_COUNTRY}
+      SUPER_ADMIN_REGION: ${SUPER_ADMIN_REGION}
+      SUPER_ADMIN_CITY: ${SUPER_ADMIN_CITY}
+      SUPER_ADMIN_LANGUAGE: ${SUPER_ADMIN_LANGUAGE}
+      ## IMAGE CONFIG
+      IMAGE_DIR: ${IMAGE_DIR}
+#    stdin_open: true
+#    tty: true
+    depends_on:
+      - postgres
+#        condition: service_healthy
+    networks:
+      - ecomie-network
+
+  postgres:
+    container_name: ecomie-database
+    image: postgres
+    ports:
+      - "5433:5432"
+    volumes:
+      - ./data/backup:/var/lib/postgresql/backup
+#    healthcheck:
+#      test: [ 'CMD-SHELL', 'pg_isready -U postgres' ]
+#      interval: 1s
+#      timeout: 1s
+#      retries: 30
+    environment:
+      POSTGRES_USER: ${DATASOURCE_USERNAME}
+      POSTGRES_PASSWORD: ${DATASOURCE_PASSWORD}
+      POSTGRES_DB: ecomie_db
+    networks:
+      - ecomie-network
+
+networks:
+  ecomie-network:
+    driver: bridge
+

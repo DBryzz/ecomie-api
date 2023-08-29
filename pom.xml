@@ -175,7 +175,7 @@
 	</dependencies>
 
 	<build>
-		<finalName>auth-service</finalName>
+		<finalName>ecomie</finalName>
 		<plugins>
 			<plugin>
 				<groupId>org.springframework.boot</groupId>

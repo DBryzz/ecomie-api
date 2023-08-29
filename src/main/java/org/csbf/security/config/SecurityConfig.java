@@ -32,6 +32,7 @@ public class SecurityConfig {
 //                .requestMatchers("/v3/api-docs/**", "/swagger-ui/**").permitAll()
                 // permit users with roles, USER
                 .requestMatchers("/api/v1/secure/user**").hasAnyAuthority("USER")
+                .requestMatchers("/api/v1/secure/ecomiest**").hasAnyAuthority("ECOMIEST")
                 // Permit only ADMIN users
                 .requestMatchers("/api/v1/secure/admin**").hasAuthority("ADMIN")
                 .anyRequest()

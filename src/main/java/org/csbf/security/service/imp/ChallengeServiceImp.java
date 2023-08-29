@@ -9,9 +9,14 @@ import org.csbf.security.exceptions.ResourceNotFoundException;
 import org.csbf.security.model.Challenge;
 import org.csbf.security.repository.ChallengeRepository;
 import org.csbf.security.repository.SessionRepository;
+import org.csbf.security.repository.SubscriptionRepository;
+import org.csbf.security.repository.UserRepository;
 import org.csbf.security.service.ChallengeService;
+import org.csbf.security.service.FileUploadService;
 import org.csbf.security.utils.helperclasses.HelperDto;
 import org.csbf.security.utils.helperclasses.ResponseMessage;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,6 +31,8 @@ public class ChallengeServiceImp implements ChallengeService {
 
     private final ChallengeRepository challengeRepo;
     private final SessionRepository sessionRepo;
+    private final UserRepository userRepo;
+    private final SubscriptionRepository subscriptionRepo;
 
     @Override
     @Transactional
@@ -91,7 +98,15 @@ public class ChallengeServiceImp implements ChallengeService {
 
     @Override
     public HelperDto.ChallengeFullDto getChallenge(UUID chalId) {
+        Authentication authUser = SecurityContextHolder.getContext().getAuthentication();
         var challenge = challengeRepo.findById(chalId).orElseThrow(() -> new ResourceNotFoundException("challenge not found"));
+
+        if (!authUser.getAuthorities().contains("ADMIN")){
+            var user = userRepo.findByEmail(authUser.getName()).orElseThrow(()->new ResourceNotFoundException("user not found"));
+            if (subscriptionRepo.findAllByUserAndChallenge(user, challenge).isEmpty()) {
+                throw new BadRequestException.InvalidAuthenticationRequestException("Forbidden Request. User not subscribed");
+            }
+        }
 
         return new HelperDto.ChallengeFullDto(challenge);
     }

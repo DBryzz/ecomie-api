@@ -98,11 +98,15 @@ public class ChallengeReportServiceImp implements ChallengeReportService {
     public HelperDto.ChallengeReportFullDto getChallengeReport(UUID reportId) {
         Authentication authUser = SecurityContextHolder.getContext().getAuthentication();
         var report = reportRepo.findById(reportId).orElseThrow(() -> new ResourceNotFoundException("report does not exist"));
-        if(!report.getSubscription().getUser().getEmail().equals(authUser.getName())) {
-            throw new BadRequestException.InvalidAuthenticationRequestException("Forbidden Request");
+        if (!authUser.getAuthorities().contains("ADMIN")) {
+            if (!report.getSubscription().getUser().getEmail().equals(authUser.getName())) {
+                throw new BadRequestException.InvalidAuthenticationRequestException("Forbidden Request. User not subscribed");
+            }
         }
         return new HelperDto.ChallengeReportFullDto(report);
     }
+
+
 
     @Override
     public List<HelperDto.ChallengeReportFullDto> getChallengeReports() {

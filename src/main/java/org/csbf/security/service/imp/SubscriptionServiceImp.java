@@ -85,12 +85,16 @@ public class SubscriptionServiceImp implements SubscriptionService {
 
     @Override
     public HelperDto.SubscriptionFullDto getSubscription(UUID subscriptionId) {
+        Authentication authUser = SecurityContextHolder.getContext().getAuthentication();
+        var subscription = subscriptionRepo.findById(subscriptionId).orElseThrow(() -> new ResourceNotFoundException("subscription not found"));
+        if (!authUser.getAuthorities().contains("ADMIN")) {
+            if (!subscription.getUser().getEmail().equals(authUser.getName())) {
+                throw new BadRequestException.InvalidAuthenticationRequestException("Forbidden Request. User not subscribed");
 
-        return new HelperDto.SubscriptionFullDto(subscriptionRepo
-                .findById(subscriptionId)
-                .orElseThrow(
-                        () -> new ResourceNotFoundException("subscription not found")
-                ));
+            }
+        }
+
+                return new HelperDto.SubscriptionFullDto(subscription);
     }
 
     @Override
