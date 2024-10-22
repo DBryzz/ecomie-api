@@ -1,12 +1,26 @@
 FROM maven:3.8.3-openjdk-17 AS build
 
 WORKDIR /build
-COPY . /build
-#COPY ./src /build/src
-#COPY ./pom.xml /build
-#COPY ./.env /build
+#COPY . /build
 
-RUN mvn clean install -DskipTests
+#
+
+COPY ./pom.xml /build
+RUN mvn dependency:go-offline
+
+#RUN rm -rf /build/pom.xml
+
+COPY ./src /build/src
+
+COPY ./.env /build/.env
+#COPY ./.env /build/.env
+#RUN mvn clean install -DskipTests
+
+#RUN rm -rf /build/target
+
+RUN mvn clean package -DskipTests
+
+
 
 FROM openjdk:17-alpine AS deploy
 

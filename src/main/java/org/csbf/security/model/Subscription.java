@@ -7,6 +7,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
+import org.hibernate.annotations.UuidGenerator;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -21,8 +22,10 @@ import java.util.UUID;
 public class Subscription {
 
     @Id
-    @GeneratedValue(strategy= GenerationType.AUTO)
+    @UuidGenerator
+//    @GeneratedValue(strategy= GenerationType.IDENTITY)
     private UUID id;
+
     @Column(unique = true, nullable = false)
     private int target;
 
@@ -36,7 +39,7 @@ public class Subscription {
     private Challenge challenge;
 
     @Column(nullable = true)
-    @OneToMany(mappedBy = "subscription")
+    @OneToMany(fetch = FetchType.LAZY, mappedBy = "subscription")
     private List<ChallengeReport> challengeReports;
 //    @Column(nullable = false)
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
@@ -52,6 +55,11 @@ public class Subscription {
     private LocalDateTime createdAt;
     @UpdateTimestamp
     private LocalDateTime updatedAt;
+
+    @PrePersist
+    protected void onCreate() {
+        this.id = UUID.randomUUID();
+    }
 
     public void addChallengeReport(ChallengeReport challengeReport) {
         this.challengeReports.add(challengeReport);

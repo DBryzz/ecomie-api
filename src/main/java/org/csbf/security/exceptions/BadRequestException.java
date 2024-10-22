@@ -6,8 +6,8 @@ public class BadRequestException extends BaseException{
     }
 
     public static class InvalidAuthenticationRequestException extends BadRequestException {
-        public InvalidAuthenticationRequestException(String email) {
-            super("Email '" + email + "' and password do not match");
+        public InvalidAuthenticationRequestException(String message) {
+            super("Forbidden Request: " + message);
         }
     }
 }

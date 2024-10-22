@@ -4,9 +4,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.EnumUtils;
+import org.csbf.security.config.AuthContext;
 import org.csbf.security.constant.Role;
 import org.csbf.security.exceptions.BadRequestException;
 import org.csbf.security.exceptions.BaseException;
+import org.csbf.security.exceptions.InvalidUuidException;
 import org.csbf.security.exceptions.ResourceNotFoundException;
 import org.csbf.security.model.User;
 import org.csbf.security.repository.ChallengeRepository;
@@ -39,6 +41,7 @@ public class UserServiceImp implements UserService {
     private final SessionRepository sessionRepo;
     private final SubscriptionRepository subscriptionRepo;
     private final ChallengeRepository challengeRepo;
+    private final AuthContext authContext;
 
     private final Environment environment;
 
@@ -47,9 +50,9 @@ public class UserServiceImp implements UserService {
             Optional<MultipartFile> file,
             String jsonData
     ) {
-        Authentication authUser = SecurityContextHolder.getContext().getAuthentication();
-        log.info("{}", authUser);
-        User user = userRepository.findByEmail(authUser.getName())
+//        Authentication authUser = SecurityContextHolder.getContext().getAuthentication();
+        log.info("{}", authContext.getAuthUser());
+        User user = userRepository.findByEmail(authContext.getAuthUser().getName())
                 .orElseThrow(() -> new ResourceNotFoundException("Profile not found"));
 
         return getUpdateResponseMessage(file, jsonData, user);
@@ -69,14 +72,16 @@ public class UserServiceImp implements UserService {
 
     @Override
     public ResponseMessage changeUserRole(String email, String role) {
-        var user = userRepository.findByEmail(email).orElseThrow(() -> new ResourceNotFoundException("user not found"));
+        var user = userRepository.findByEmail(email).orElseThrow(() -> new ResourceNotFoundException("User not found"));
         if (!EnumUtils.isValidEnum(Role.class, role.toUpperCase()))
             throw new BadRequestException("Invalid session status");
-        if(!user.getRoles().contains(role.toUpperCase()))
-            user.setRoles(user.getRoles()+"-"+role.toUpperCase());
-
-        var updatedUser = userRepository.save(user);
-        return new ResponseMessage.SuccessResponseMessage("user role updated" + updatedUser.getRoles());
+//        if(!user.getRoles().contains(role.toUpperCase()))
+//            user.setRole(user.getRoles()+"-"+role.toUpperCase());
+        if(!user.getRole().name().equals(role.toUpperCase())) {
+            user.setRole(Role.valueOf(role.toUpperCase()));
+            user = userRepository.save(user);
+        }
+        return new ResponseMessage.SuccessResponseMessage("User role updated - " + user.getRole());
     }
 
     private ResponseMessage getUpdateResponseMessage(Optional<MultipartFile> file, String jsonData, User user) {
@@ -109,9 +114,9 @@ public class UserServiceImp implements UserService {
             } catch (Exception e) {
                 throw new BaseException("Could not upload the file !");
             }
-            if (
-                    oldFile != null && !imageFileName.equals(oldFile)
-            ) fileUploadService.deleteFile(oldFile);
+            if (oldFile != null && !imageFileName.equals(oldFile) && fileUploadService.resourceExist(oldFile)) {
+                fileUploadService.deleteFile(oldFile);
+            }
 
             log.info("old file name {}", oldFile);
             log.info("{}",
@@ -138,10 +143,10 @@ public class UserServiceImp implements UserService {
     @Override
     public HelperDto.UserDto getAuthUserProfile() {
         log.info("TEST: In method");
-        Authentication authUser = SecurityContextHolder.getContext().getAuthentication();
-        log.info("{}", authUser);
+//        Authentication authUser = SecurityContextHolder.getContext().getAuthentication();
+        log.info("{}", authContext.getAuthUser());
 
-        User user = userRepository.findByEmail(authUser.getName())
+        User user = userRepository.findByEmail(authContext.getAuthUser().getName())
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         return new HelperDto.UserDto(user);
@@ -183,10 +188,10 @@ public class UserServiceImp implements UserService {
 
     @Override
     public byte[] getProfilePicture() {
-        Authentication authUser = SecurityContextHolder.getContext().getAuthentication();
+//        Authentication authUser = SecurityContextHolder.getContext().getAuthentication();
 
         User user = userRepository
-                .findByEmail(authUser.getName())
+                .findByEmail(authContext.getAuthUser().getName())
                 .orElseThrow(() -> new ResourceNotFoundException("Profile not found"));
         Resource resource = loadImage(new HelperDto.EmailRequest(user.getEmail()));
         try {
@@ -229,17 +234,23 @@ public class UserServiceImp implements UserService {
     }
 
     @Override
-    public List<HelperDto.UserFullDto> getUsersInASession(UUID sessionId, boolean blocked, Optional<UUID> optionalChallengeId) {
-        var session = sessionRepo.findById(sessionId).orElseThrow(() -> new ResourceNotFoundException("session not found"));
+    public List<HelperDto.UserFullDto> getUsersInASession(UUID sessionId, boolean blocked, Optional<String> optionalChallengeId) {
+        var session = sessionRepo.findById(sessionId).orElseThrow(() -> new ResourceNotFoundException("Session not found"));
         List<HelperDto.UserFullDto> users = new ArrayList<>();
 
         if(optionalChallengeId.isPresent()) {
-            var challenge = challengeRepo.findById(optionalChallengeId.get()).orElseThrow(() -> new ResourceNotFoundException("challenge not found"));
-            subscriptionRepo.selectAllUsersSubscribedToSessionViaChallenge(session, challenge).forEach(user -> {users.add(new HelperDto.UserFullDto(user));});
+            String challengeIdString = optionalChallengeId.get();
+            try {
+                UUID challengeId = UUID.fromString(challengeIdString);
+                var challenge = challengeRepo.findById(challengeId).orElseThrow(() -> new ResourceNotFoundException("Challenge not found"));
+                subscriptionRepo.selectAllUsersSubscribedToSessionViaChallenge(session, challenge).forEach(user -> users.add(new HelperDto.UserFullDto(user)));
+            }catch (IllegalArgumentException e) {
+                throw new InvalidUuidException(challengeIdString);
+            }
         } else if(blocked) {
-            subscriptionRepo.selectAllUsersBlockedInSession(session).forEach(user -> {users.add(new HelperDto.UserFullDto(user));});
+            subscriptionRepo.selectAllUsersBlockedInSession(session).forEach(user -> users.add(new HelperDto.UserFullDto(user)));
         } else {
-            subscriptionRepo.selectAllUsersSubscribedToSession(session).forEach(user -> {users.add(new HelperDto.UserFullDto(user));});
+            subscriptionRepo.selectAllUsersSubscribedToSession(session).forEach(user -> users.add(new HelperDto.UserFullDto(user)));
 
         }
         return users;
@@ -247,8 +258,8 @@ public class UserServiceImp implements UserService {
 
 //    @Override
 //    public List<HelperDto.UserFullDto> getUsersSubscribedToSessionViaChallenge(UUID sessionId, UUID challengeId) {
-//        var session = sessionRepo.findById(sessionId).orElseThrow(() -> new ResourceNotFoundException("session not found"));
-//        var challenge = challengeRepo.findById(challengeId).orElseThrow(() -> new ResourceNotFoundException("challenge not found"));
+//        var session = sessionRepo.findById(sessionId).orElseThrow(() -> new ResourceNotFoundException("Session not found"));
+//        var challenge = challengeRepo.findById(challengeId).orElseThrow(() -> new ResourceNotFoundException("Challenge not found"));
 //
 //        List<HelperDto.UserFullDto> users = new ArrayList<>();
 //        subscriptionRepo.selectAllUsersSubscribedToSessionViaChallenge(session, challenge).forEach(user -> {users.add(new HelperDto.UserFullDto(user));});

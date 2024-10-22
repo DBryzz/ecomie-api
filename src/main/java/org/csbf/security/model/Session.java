@@ -22,34 +22,38 @@ import java.util.UUID;
 @Table(name = "session")
 public class Session {
     @Id
-    @GeneratedValue(strategy= GenerationType.AUTO)
+    @GeneratedValue(strategy= GenerationType.UUID)
     private UUID id;
     @Column(unique = true, nullable = false)
     private String name;
     @Column(nullable = true)
     private String description;
-//    @Column(nullable = true)
-//    @OneToMany(mappedBy = "session")
-//    private List<ChallengeReport> challengeReports;
-    @ManyToMany
+
+    @ManyToMany(fetch = FetchType.LAZY)
     @Column(nullable = true)
     @JoinTable(
             name = "session_challenge",
             joinColumns = @JoinColumn(name = "session_id"),
             inverseJoinColumns = @JoinColumn(name = "challenge_id"))
     private List<Challenge> challenges;
+
     @Column(nullable = true)
-    @OneToMany(mappedBy = "session")
+    @OneToMany(fetch = FetchType.LAZY, mappedBy = "session")
     private List<Subscription> subscriptions;
 
     @Column(nullable = false, updatable = false)
     private LocalDateTime startDate;
+
     @Column(nullable = false, updatable = false)
     private LocalDateTime endDate;
-    @Column(nullable = false, columnDefinition = "varchar(255) default 'INACTIVE'")
-    private String status;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, columnDefinition = "varchar(50) default 'INACTIVE'")
+    private SessionStatus status;
+
     @CreationTimestamp
     private LocalDateTime createdAt;
+
     @UpdateTimestamp
     private LocalDateTime updatedAt;
 
@@ -64,6 +68,9 @@ public class Session {
     }
 
     public void addChallenge(Challenge challenge) {
+        if (this.challenges.stream().anyMatch(challenge1 -> challenge1.getId().equals(challenge.getId()))) {
+            return;
+        }
         this.challenges.add(challenge);
         challenge.getSessions().add(this);
     }

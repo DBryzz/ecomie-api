@@ -45,14 +45,14 @@ public class AuthenticationServiceImp implements AuthenticationService {
 
 //        String appUrl = servletRequest.getContextPath();
 //        String roles = Role.USER.name()+"-"+Role.ADMIN.name();
-        String roles = Role.USER.name();
+//        String roles = Role.USER.name();
 
         var user = User.builder()
                 .firstname(request.firstname())
                 .lastname(request.lastname())
                 .email(request.email())
                 .password(passwordEncoder.encode(request.password()))
-                .roles(roles)
+                .role(Role.USER)
                 .accountBlocked(false)
                 .accountEnabled(false)
                 .accountSoftDeleted(false)
@@ -84,7 +84,7 @@ public class AuthenticationServiceImp implements AuthenticationService {
                     )
             );
         } catch(AuthenticationException e) {
-            throw new BadRequestException.InvalidAuthenticationRequestException(request.email());
+            throw new BadRequestException.InvalidAuthenticationRequestException("Email '" + request.email() + "' and password do not match");
         }
 
         var jwtToken = jwtService.generateToken(user);

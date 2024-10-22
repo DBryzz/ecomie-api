@@ -41,7 +41,7 @@ public interface UserService {
 
     void deleteUserProfile(UUID userId);
 
-    List<HelperDto.UserFullDto> getUsersInASession(UUID sessionId, boolean blocked, Optional<UUID> optionalChallengeId);
+    List<HelperDto.UserFullDto> getUsersInASession(UUID sessionId, boolean blocked, Optional<String> optionalChallengeId);
 
 //    List<HelperDto.UserFullDto> getUsersSubscribedToSessionViaChallenge(UUID sessionId, UUID challengeId);
 

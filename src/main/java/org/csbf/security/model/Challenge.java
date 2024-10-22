@@ -1,10 +1,12 @@
 package org.csbf.security.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.csbf.security.constant.ChallengeType;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.Immutable;
 import org.hibernate.annotations.UpdateTimestamp;
@@ -22,26 +24,34 @@ import java.util.UUID;
 public class Challenge {
 
     @Id
-    @GeneratedValue(strategy= GenerationType.AUTO)
+    @GeneratedValue(strategy= GenerationType.UUID)
     private UUID id;
+
     @Column(unique = true, nullable = false)
     private String name;
+
     @Column(nullable = true)
     private String description;
+
     @Column(nullable = false)
     private int target;
+
+    @JsonIgnore
     @Column(nullable = true)
-    @OneToMany(mappedBy = "challenge")
+    @OneToMany(fetch = FetchType.LAZY, mappedBy = "challenge")
     private List<Subscription> subscriptions;
-//    @Column(nullable = true)
-//    @OneToMany(mappedBy = "challenge")
-//    private List<ChallengeReport> challengeReports;
+
+    @JsonIgnore
     @Column(nullable = true)
-    @ManyToMany(mappedBy = "challenges")
+    @ManyToMany(fetch = FetchType.LAZY, mappedBy = "challenges")
     private List<Session> sessions;
-    private String type;
+
+    @Enumerated(EnumType.STRING)
+    private ChallengeType type;
+
     @CreationTimestamp
     private LocalDateTime createdAt;
+
     @UpdateTimestamp
     private LocalDateTime updatedAt;
 

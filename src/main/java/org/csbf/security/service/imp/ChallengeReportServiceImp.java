@@ -1,6 +1,8 @@
 package org.csbf.security.service.imp;
 
 import lombok.RequiredArgsConstructor;
+import org.csbf.security.config.AuthContext;
+import org.csbf.security.constant.Role;
 import org.csbf.security.exceptions.BadRequestException;
 import org.csbf.security.exceptions.ResourceNotFoundException;
 import org.csbf.security.model.ChallengeReport;
@@ -28,26 +30,27 @@ public class ChallengeReportServiceImp implements ChallengeReportService {
     private final SessionRepository sessionRepo;
     private final SubscriptionRepository subscriptionRepo;
     private final UserRepository userRepo;
+    private final AuthContext authContext;
 
     @Override
     public ResponseMessage storeReport(UUID sessionId, HelperDto.ChallengeReportCreateDto challengeReportCreateDto) {
-        Authentication authUser = SecurityContextHolder.getContext().getAuthentication();
+//        Authentication authUser = SecurityContextHolder.getContext().getAuthentication();
 
-        var user = userRepo.findByEmail(authUser.getName()).orElseThrow(() -> new ResourceNotFoundException("user not found"));
+        var user = userRepo.findByEmail(authContext.getAuthUser().getName()).orElseThrow(() -> new ResourceNotFoundException("User not found"));
         return store(sessionId, challengeReportCreateDto, user);
     }
 
     @Override
     public ResponseMessage storeUserReport(UUID userId, UUID sessionId, HelperDto.ChallengeReportCreateDto challengeReportCreateDto) {
-        var user = userRepo.findById(userId).orElseThrow(() -> new ResourceNotFoundException("user not found"));
+        var user = userRepo.findById(userId).orElseThrow(() -> new ResourceNotFoundException("User not found"));
         return store(sessionId, challengeReportCreateDto, user);
     }
 
     @NotNull
     private ResponseMessage store(UUID sessionId, HelperDto.ChallengeReportCreateDto challengeReportCreateDto, User user) {
-        var session = sessionRepo.findById(sessionId).orElseThrow(() -> new ResourceNotFoundException("session not found"));
+        var session = sessionRepo.findById(sessionId).orElseThrow(() -> new ResourceNotFoundException("Session not found"));
 
-        var subscription = subscriptionRepo.findBySessionAndUser(session, user).orElseThrow(() -> new ResourceNotFoundException("subscription not found"));
+        var subscription = subscriptionRepo.findBySessionAndUser(session, user).orElseThrow(() -> new ResourceNotFoundException("Subscription not found"));
 
         var report = ChallengeReport.builder()
                 .subscription(subscription)
@@ -60,15 +63,15 @@ public class ChallengeReportServiceImp implements ChallengeReportService {
 
         reportRepo.save(report);
 
-        return new ResponseMessage.SuccessResponseMessage("updated report successfully");
+        return new ResponseMessage.SuccessResponseMessage("Updated report successfully");
     }
 
     @Override
     public ResponseMessage updateChallengeReport(UUID reportId, HelperDto.ChallengeReportCreateDto challengeReportCreateDto) {
-        Authentication authUser = SecurityContextHolder.getContext().getAuthentication();
-        var report = reportRepo.findById(reportId).orElseThrow(() -> new ResourceNotFoundException("report does not exist"));
-        if(!report.getSubscription().getUser().getEmail().equals(authUser.getName())) {
-            throw new BadRequestException.InvalidAuthenticationRequestException("Forbidden Request");
+//        Authentication authUser = SecurityContextHolder.getContext().getAuthentication();
+        var report = reportRepo.findById(reportId).orElseThrow(() -> new ResourceNotFoundException("Report does not exist"));
+        if(!report.getSubscription().getUser().getEmail().equals(authContext.getAuthUser().getName())) {
+            throw new BadRequestException.InvalidAuthenticationRequestException("Report is not yours");
         }
 
         return update(challengeReportCreateDto, report);
@@ -83,12 +86,12 @@ public class ChallengeReportServiceImp implements ChallengeReportService {
         report.setRemark(challengeReportCreateDto.remark());
 
         reportRepo.save(report);
-        return new ResponseMessage.SuccessResponseMessage("updated report successfully");
+        return new ResponseMessage.SuccessResponseMessage("Updated report successfully");
     }
 
     @Override
     public ResponseMessage updateChallengeReportForUser(UUID reportId, HelperDto.ChallengeReportCreateDto challengeReportCreateDto) {
-        var report = reportRepo.findById(reportId).orElseThrow(() -> new ResourceNotFoundException("report does not exist"));
+        var report = reportRepo.findById(reportId).orElseThrow(() -> new ResourceNotFoundException("Report does not exist"));
 
         return update(challengeReportCreateDto, report);
 
@@ -96,11 +99,12 @@ public class ChallengeReportServiceImp implements ChallengeReportService {
 
     @Override
     public HelperDto.ChallengeReportFullDto getChallengeReport(UUID reportId) {
-        Authentication authUser = SecurityContextHolder.getContext().getAuthentication();
-        var report = reportRepo.findById(reportId).orElseThrow(() -> new ResourceNotFoundException("report does not exist"));
-        if (!authUser.getAuthorities().contains("ADMIN")) {
-            if (!report.getSubscription().getUser().getEmail().equals(authUser.getName())) {
-                throw new BadRequestException.InvalidAuthenticationRequestException("Forbidden Request. User not subscribed");
+//        Authentication authUser = SecurityContextHolder.getContext().getAuthentication();
+        var report = reportRepo.findById(reportId).orElseThrow(() -> new ResourceNotFoundException("Report does not exist"));
+//        if (!authUser.getAuthorities().contains("ADMIN")) {
+        if (authContext.getAuthUser().getAuthorities().stream().noneMatch(authority -> authority.getAuthority().equals(Role.ADMIN.name()))) {
+            if (!report.getSubscription().getUser().getEmail().equals(authContext.getAuthUser().getName())) {
+                throw new BadRequestException.InvalidAuthenticationRequestException("User not subscribed");
             }
         }
         return new HelperDto.ChallengeReportFullDto(report);

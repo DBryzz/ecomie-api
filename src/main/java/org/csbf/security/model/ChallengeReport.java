@@ -20,7 +20,7 @@ public class ChallengeReport {
     @Transient
     ChallengeReportRepository reportRepo;
     @Id
-    @GeneratedValue(strategy= GenerationType.AUTO)
+    @GeneratedValue(strategy= GenerationType.UUID)
     private UUID id;
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     private Subscription subscription;

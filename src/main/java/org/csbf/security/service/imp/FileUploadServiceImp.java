@@ -1,14 +1,8 @@
 package org.csbf.security.service.imp;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.csbf.security.exceptions.ResourceNotFoundException;
 import org.csbf.security.service.FileUploadService;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.env.Environment;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
@@ -25,6 +19,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.Objects;
+import java.util.UUID;
 import java.util.stream.Stream;
 
 @Slf4j
@@ -58,7 +53,7 @@ public class FileUploadServiceImp implements FileUploadService {
 
     @Override
     public String save(MultipartFile file) {
-        String fileName = StringUtils.cleanPath(file.getOriginalFilename());
+        String fileName = StringUtils.cleanPath(UUID.randomUUID() + "__" + Objects.requireNonNull(file.getOriginalFilename()));
 
         /** saving source code **/
 
@@ -123,8 +118,8 @@ public class FileUploadServiceImp implements FileUploadService {
             if (resource.exists() || resource.isReadable()) {
                 file1.delete();
             } else {
-                log.info("file does not exist, fileName : {}", fileName);
-                throw new ResourceNotFoundException("Could not read the file!");
+                log.info("FileUploadServiceImp.deleteFile --- Old file does not exist, fileName : {}", fileName);
+                throw new ResourceNotFoundException("Could not read OLD file or it doesn't exist!");
             }
         } catch (MalformedURLException e) {
             log.error("{}", e.getMessage());

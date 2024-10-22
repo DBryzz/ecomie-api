@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.csbf.security.constant.Role;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 import org.springframework.security.core.GrantedAuthority;
@@ -13,6 +14,8 @@ import org.springframework.security.core.userdetails.UserDetails;
 
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Data
 @Builder
@@ -23,7 +26,7 @@ import java.util.*;
 public class User implements UserDetails {
 
     @Id
-    @GeneratedValue(strategy=GenerationType.AUTO)
+    @GeneratedValue(strategy=GenerationType.UUID)
     private UUID id;
     private String firstname;
     private String lastname;
@@ -47,7 +50,9 @@ public class User implements UserDetails {
     private String profilePictureFileName;
     /** END */
 
-    private String roles;
+    @Enumerated(EnumType.STRING)
+    private Role role;
+//    private String roles;
     private boolean accountEnabled;
     private String emailVerificationToken;
     private boolean accountBlocked;
@@ -64,25 +69,10 @@ public class User implements UserDetails {
     @UpdateTimestamp
     private LocalDateTime updatedAt;
 
-
-
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-//        return List.of(new SimpleGrantedAuthority(role.name()));
-
-//        ================================================================
-        ArrayList<String> roles = new ArrayList<>(Arrays.asList(this.roles.split("-")));
-//        user.getRoles();
-        List<SimpleGrantedAuthority> authorities = new ArrayList<>();
-
-        for (String role : roles) {
-            authorities.add(new SimpleGrantedAuthority(role));
-        }
-
-        return authorities;
+        return List.of(new SimpleGrantedAuthority(role.name()));
     }
-
-
 
     @Override
     public String getPassword() {

@@ -2,7 +2,9 @@ package org.csbf.security.service.imp;
 
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.EnumUtils;
+import org.csbf.security.config.AuthContext;
 import org.csbf.security.constant.ChallengeType;
+import org.csbf.security.constant.Role;
 import org.csbf.security.exceptions.BadRequestException;
 import org.csbf.security.exceptions.ResourceExistsException;
 import org.csbf.security.exceptions.ResourceNotFoundException;
@@ -33,79 +35,86 @@ public class ChallengeServiceImp implements ChallengeService {
     private final SessionRepository sessionRepo;
     private final UserRepository userRepo;
     private final SubscriptionRepository subscriptionRepo;
+    private final AuthContext authContext;
 
     @Override
     @Transactional
-    public ResponseMessage store(HelperDto.ChallengeCreateDto challengeCreateDto, UUID[] sessionIds) {
+    public ResponseMessage store(HelperDto.ChallengeCreateDto challengeCreateDto) {
 
-        if (!EnumUtils.isValidEnum(ChallengeType.class, challengeCreateDto.type().toUpperCase()))
+        if (!EnumUtils.isValidEnum(ChallengeType.class, challengeCreateDto.type().toUpperCase())) {
             throw new BadRequestException("Invalid challenge type");
-        challengeRepo.findByName(challengeCreateDto.name()).ifPresent(chal -> {throw new ResourceExistsException("challenge with the name '" + chal.getName() + "' already exist");});
+        }
+        var type = challengeCreateDto.type().toUpperCase();
+        challengeRepo.findByName(challengeCreateDto.name()).ifPresent(challenge -> {throw new ResourceExistsException("Challenge with the name '" + challenge.getName() + "' already exist");});
         var challenge = Challenge.builder()
                 .name(challengeCreateDto.name())
                 .description(challengeCreateDto.description())
-                .type(challengeCreateDto.type())
+                .type(ChallengeType.valueOf(type))
                 .target(challengeCreateDto.target())
                 .build();
 
-        addSessionToChallenge(sessionIds, challenge);
-        return new ResponseMessage.SuccessResponseMessage("challenge created. Type: " + challenge.getType());
+        addSessionToChallenge(challengeCreateDto.sessions(), challenge);
+        challengeRepo.save(challenge);
+        return new ResponseMessage.SuccessResponseMessage("Challenge created. Type: " + type);
 
     }
 
     @Override
     public ResponseMessage changeType(UUID id, String status) {
-        var challenge = challengeRepo.findById(id).orElseThrow(() -> new ResourceNotFoundException("challenge not found"));
-        if (!EnumUtils.isValidEnum(ChallengeType.class, status.toUpperCase()))
-            throw new BadRequestException("Invalid session status");
-        challenge.setType(status.toUpperCase());
+        var challenge = challengeRepo.findById(id).orElseThrow(() -> new ResourceNotFoundException("Challenge not found"));
+        if (!EnumUtils.isValidEnum(ChallengeType.class, status.toUpperCase())) {
+            throw new BadRequestException("Invalid challenge type");
+        }
+        challenge.setType(ChallengeType.valueOf(status.toUpperCase()));
 
         var updatedChallenge = challengeRepo.save(challenge);
-        return new ResponseMessage.SuccessResponseMessage("session status changed. Status: " + updatedChallenge.getType());
+        return new ResponseMessage.SuccessResponseMessage("Challenge type changed. Type: " + updatedChallenge.getType());
     }
 
     @Override
     @Transactional
-    public ResponseMessage update(UUID chalId, HelperDto.ChallengeCreateDto challengeCreateDto, UUID[] sessionIds) {
-        var challenge = challengeRepo.findById(chalId).orElseThrow(() -> new ResourceNotFoundException("challenge not found"));
+    public ResponseMessage update(UUID challengeId, HelperDto.ChallengeCreateDto challengeCreateDto) {
+        var challenge = challengeRepo.findById(challengeId).orElseThrow(() -> new ResourceNotFoundException("Challenge not found"));
         challengeRepo.findByName(challengeCreateDto.name()).ifPresent(chal -> {
-            throw new ResourceExistsException("challenge with the name '" + chal.getName() + "' already exist");
+            throw new ResourceExistsException("Challenge with the name '" + chal.getName() + "' already exist");
         });
 
-        if (!EnumUtils.isValidEnum(ChallengeType.class, challengeCreateDto.type().toUpperCase()))
+        if (!EnumUtils.isValidEnum(ChallengeType.class, challengeCreateDto.type().toUpperCase())) {
             throw new BadRequestException("Invalid challenge type");
+        }
 
         challenge.setName(challengeCreateDto.name());
         challenge.setDescription(challenge.getDescription());
         challenge.setTarget(challengeCreateDto.target());
 
-        addSessionToChallenge(sessionIds, challenge);
+        addSessionToChallenge(challengeCreateDto.sessions(), challenge);
+        challengeRepo.save(challenge);
 
-        return new ResponseMessage.SuccessResponseMessage("challenge updated. Type: " + challenge.getType());
+        return new ResponseMessage.SuccessResponseMessage("Challenge updated. Type: " + challenge.getType());
 
     }
 
-    private void addSessionToChallenge(UUID[] sessionIds, Challenge challenge) {
+    private Challenge addSessionToChallenge(UUID[] sessionIds, Challenge challenge) {
         if (sessionIds.length > 0) {
             Arrays.asList(sessionIds).forEach(id -> {
-                var session = sessionRepo.findById(id).orElseThrow(() -> new ResourceNotFoundException("session not found"));
+                var session = sessionRepo.findById(id).orElseThrow(() -> new ResourceNotFoundException("Session not found"));
                 challenge.addSession(session);
-                sessionRepo.save(session);
             });
         }
-        challengeRepo.save(challenge);
+        return challenge;
     }
 
     @Override
-    public HelperDto.ChallengeFullDto getChallenge(UUID chalId) {
-        Authentication authUser = SecurityContextHolder.getContext().getAuthentication();
-        var challenge = challengeRepo.findById(chalId).orElseThrow(() -> new ResourceNotFoundException("challenge not found"));
+    public HelperDto.ChallengeFullDto getChallenge(UUID challengeId) {
+        Authentication authUser = authContext.getAuthUser();
+        var challenge = challengeRepo.findById(challengeId).orElseThrow(() -> new ResourceNotFoundException("Challenge not found"));
 
-        if (!authUser.getAuthorities().contains("ADMIN")){
-            var user = userRepo.findByEmail(authUser.getName()).orElseThrow(()->new ResourceNotFoundException("user not found"));
-            if (subscriptionRepo.findAllByUserAndChallenge(user, challenge).isEmpty()) {
-                throw new BadRequestException.InvalidAuthenticationRequestException("Forbidden Request. User not subscribed");
-            }
+        if (authUser.getAuthorities().stream().noneMatch(authority -> authority.getAuthority().contains(Role.ADMIN.name()))){
+//            var user = userRepo.findByEmail(authUser.getName()).orElseThrow(()->new ResourceNotFoundException("User not found"));
+//            if (subscriptionRepo.findAllByUserAndChallenge(user, challenge).isEmpty()) {
+//                throw new BadRequestException.InvalidAuthenticationRequestException("User not subscribed");
+//            }
+            return HelperDto.ChallengeFullDto.justMinimal(challenge);
         }
 
         return new HelperDto.ChallengeFullDto(challenge);
@@ -113,12 +122,26 @@ public class ChallengeServiceImp implements ChallengeService {
 
     @Override
     public List<HelperDto.ChallengeFullDto> getChallenges() {
+        Authentication authUser = authContext.getAuthUser();
+
         var challenges = challengeRepo.findAll();
-        ArrayList challengeDto = new ArrayList<HelperDto.ChallengeFullDto>();
+        ArrayList challengeFullDtos = new ArrayList<HelperDto.ChallengeFullDto>();
 
-        challenges.forEach(session -> {challengeDto.add(new HelperDto.ChallengeFullDto(session));});
+        if (authUser.getAuthorities().stream().noneMatch(authority -> authority.getAuthority().contains(Role.ADMIN.name()))){
+//            var user = userRepo.findByEmail(authUser.getName()).orElseThrow(()->new ResourceNotFoundException("User not found"));
+            challenges.forEach(challenge -> {
+//                if (subscriptionRepo.findAllByUserAndChallenge(user, challenge).isEmpty()) {
+//                    throw new BadRequestException.InvalidAuthenticationRequestException("User not subscribed");
+//                }
+                challengeFullDtos.add(HelperDto.ChallengeFullDto.justMinimal(challenge));
+            });
+            return challengeFullDtos;
 
-        return challengeDto;
+        }
+
+        challenges.forEach(challenge -> challengeFullDtos.add(new HelperDto.ChallengeFullDto(challenge)));
+
+        return challengeFullDtos;
     }
 
 }

@@ -2,7 +2,7 @@ package org.csbf.security.service;
 
 import org.csbf.security.utils.helperclasses.HelperDto;
 import org.csbf.security.utils.helperclasses.ResponseMessage;
-import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.UUID;
@@ -20,5 +20,12 @@ public interface SessionService {
 
     HelperDto.SessionFullDto assignChallenges(UUID sessionId, UUID[] challengeIds);
 
+    @Transactional
+    HelperDto.SessionFullDto removeChallenges(UUID sessionId, UUID[] challengeIds);
+
     List<HelperDto.SessionFullDto> getUserSessions(UUID userId);
+
+    HelperDto.SessionFullDto assignChallenge(UUID sessionId, UUID challengeId);
+
+    HelperDto.SessionFullDto removeChallenge(UUID sessionId, UUID challengeId);
 }

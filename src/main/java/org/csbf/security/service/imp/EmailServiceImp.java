@@ -88,7 +88,7 @@ public class EmailServiceImp implements EmailService {
         }
         String recipient = to;
         String subject = "@ECOMIE - Request To Be " + purpose;
-        String body = "I will like to become a/an " + purpose + ": \n\n If you approve of this user, click on the link to approve his/her request " + requestHost +  "/api/v1/secure/admin/updateChallengeReport-user-role?email="+encodedFromEmail+"&role="+purpose;
+        String body = "I will like to become a/an " + purpose + ": \n\n If you approve of this user, click on the link to approve his/her request " + requestHost +  "/api/v1/secure/admin/update-user-role?email="+encodedFromEmail+"&role="+purpose;
         sendEmail(recipient, subject, body, from);
 
     }

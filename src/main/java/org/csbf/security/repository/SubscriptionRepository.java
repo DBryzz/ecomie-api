@@ -18,6 +18,7 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, UUID
     Optional<Subscription> findBySession(Session session);
     Optional<Subscription> findBySessionAndBlocked(Session session, boolean blocked);
     Optional<Subscription> findBySessionAndUser(Session session, User user);
+    Optional<Subscription> findBySession_IdAndUser_Id(UUID sessionId, UUID userId);
     Optional<Subscription> findBySessionAndUserAndBlocked(Session session, User user, boolean blocked);
     Optional<Subscription> findBySessionAndChallenge(Session session, Challenge challenge);
     Optional<Subscription> findBySessionAndChallengeAndUser(Session session, Challenge challenge, User user);
